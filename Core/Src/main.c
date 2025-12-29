@@ -49,7 +49,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-int i = 0;
+
 
 /* USER CODE END PV */
 
@@ -62,37 +62,7 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-  // Handle the received data here
-  if(hi2c->Instance == hi2c1.Instance) {
-    if(mlx90640.state == MLX90640_STATE_READING_SUBPAGE0) {
-      mlx90640.state = MLX90640_STATE_COMPLETE_SUBPAGE0;
-    } 
-    else if(mlx90640.state == MLX90640_STATE_READING_SUBPAGE1) {
-      mlx90640.state = MLX90640_STATE_COMPLETE_SUBPAGE1;
-    }
-  }
-  LCD_ShowHexNum(i - 1, 0, mlx90640.frameData[0], 4, Color_White, Color_Black);
-  LCD_ShowHexNum(i - 1, 5, mlx90640.frameData[1], 4, Color_White, Color_Black);
-  LCD_ShowHexNum(i - 1, 10, mlx90640.frameData[2], 4, Color_White, Color_Black);
-  LCD_ShowHexNum(i, 0, mlx90640.frameData[768 - 4], 4, Color_White, Color_Black);
-  LCD_ShowHexNum(i, 5, mlx90640.frameData[768 - 5], 4, Color_White, Color_Black);
-  LCD_ShowHexNum(i, 10, mlx90640.frameData[768 - 6], 4, Color_White, Color_Black);
-  // if(++i == 2) {
-  //   mlx90640_mergeData();
-  //   // i = 0;
-  // }
-  // for(int j = 0; j < 5; j++) {
-  //   LCD_ShowHexNum(j + 1, 0, mlx90640_data[j], 2, Color_White, Color_Black);
-  // }
 
-  // LCD_ShowHexNum(2, 0, mlx90640_data[768 * 2 - 1], 2, Color_White, Color_Black);
-  // LCD_ShowHexNum(2, 3, mlx90640_data[768 * 2 - 2], 2, Color_White, Color_Black);
-  // LCD_ShowHexNum(2, 6, mlx90640_data[768 * 2 - 3], 2, Color_White, Color_Black);
-  // LCD_ShowHexNum(2, 9, mlx90640_data[768 * 2 - 4], 2, Color_White, Color_Black);
-
-}
 /* USER CODE END 0 */
 
 /**
@@ -135,7 +105,6 @@ int main(void)
   mlx90640_getID();
   for(int i=0;i<3;i++)
     LCD_ShowHexNum(0, 2 * i, mlx90640.ID[i], 2, Color_White, Color_Black);
-  mlx90640_getFrameData();
 
   // mlx90640_test();
   // LCD_ShowHexNum(2, 0, mlx90640_data[768 * 2 - 1], 2, Color_White, Color_Black);
