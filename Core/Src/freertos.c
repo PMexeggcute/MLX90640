@@ -26,7 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "i2c.h"
-#include "MLX90640.h"
+#include "MLX90640_API.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +55,13 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for MLX90640GetData */
+osThreadId_t MLX90640GetDataHandle;
+const osThreadAttr_t MLX90640GetData_attributes = {
+  .name = "MLX90640GetData",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -62,6 +69,7 @@ const osThreadAttr_t defaultTask_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
+void MLX90640GetDataTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -95,6 +103,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
+  /* creation of MLX90640GetData */
+  MLX90640GetDataHandle = osThreadNew(MLX90640GetDataTask, NULL, &MLX90640GetData_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -118,11 +129,28 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    // mlx90640_getData();
     
-    osDelay(1000);
+    osDelay(1);
   }
   /* USER CODE END StartDefaultTask */
+}
+
+/* USER CODE BEGIN Header_MLX90640GetDataTask */
+/**
+* @brief Function implementing the MLX90640GetData thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_MLX90640GetDataTask */
+__weak void MLX90640GetDataTask(void *argument)
+{
+  /* USER CODE BEGIN MLX90640GetDataTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END MLX90640GetDataTask */
 }
 
 /* Private application code --------------------------------------------------*/

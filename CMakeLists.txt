@@ -46,7 +46,8 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Core/Src/LCD.c
-    Core/Src/MLX90640.c
+    Core/Src/MLX90640_API.c
+    Core/Src/MLX90640_I2C_Driver.c
 )
 
 # Add include paths

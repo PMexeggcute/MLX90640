@@ -18,8 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "MLX90640_API.h"
 #include "cmsis_os.h"
-#include "dma.h"
 #include "i2c.h"
 #include "usart.h"
 #include "gpio.h"
@@ -27,12 +27,23 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "LCD.h"
-#include "MLX90640.h"
+#include "MLX90640_I2C_Driver.h"
 #include <stdint.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
+#define MLX90640_ADDR 0x33
+#define  TA_SHIFT 8 //Default shift for MLX90640 in open air
+
+uint16_t frame[834];
+uint16_t eeMLX90640[832];  
+float mlx90640To[768];
+paramsMLX90640 mlx90640;
+float mlx90640To[768];
+float emissivity=0.95;
+uint16_t mlx90640_step=0;
 
 /* USER CODE END PTD */
 
@@ -63,6 +74,11 @@ void MX_FREERTOS_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *I2c_Handle){
+	mlx90640_step=1;
+	MLX90640_GetFrameData_IT(MLX90640_ADDR, frame,&mlx90640_step);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -74,12 +90,14 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
 
+  float ta, tr, vdd;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+    HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -94,43 +112,53 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+
+
   LCD_Init();
   LCD_FillScreen(0x0000);
-  // uint8_t mlx90640_ID[3];
-  mlx90640_getID();
-  for(int i=0;i<3;i++)
-    LCD_ShowHexNum(0, 2 * i, mlx90640.ID[i], 2, Color_White, Color_Black);
 
-  // mlx90640_test();
-  // LCD_ShowHexNum(2, 0, mlx90640_data[768 * 2 - 1], 2, Color_White, Color_Black);
-  // LCD_ShowHexNum(2, 3, mlx90640_data[768 * 2 - 2], 2, Color_White, Color_Black);
-  // HAL_Delay(10);
-  // GPIO_InitTypeDef GPIO_InitStruct = {0};
-  // GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
-  // GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-  // GPIO_InitStruct.Pull = GPIO_NOPULL;
-  // GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  // HAL_GPIO_Init(GPIOB, &GPIO_InitStruct); //配置SCl为gpio od
-  // // HAL_Delay(1000);
-  // // HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_SET); //SDA拉高
-  // for(int i=0;i<18;i++) {
-  //   HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_6);
-  //   HAL_Delay(1);
-  // }
-  // mlx90640_getData();
-  // LCD_ShowHexNum(1, 0, mlx90640_ID[1], 2, Color_White, Color_Black);
-  // mlx90640_resetReadyStatus();
-  // LCD_ShowHexNum(2, 0, mlx90640_ID[1], 2, Color_White, Color_Black);
+  uint16_t test = 0;
+  MLX90640_I2CRead(MLX90640_ADDR, 0x800D, 1, &test);
+  LCD_ShowHexNum(1, 0, test, 4, Color_White, Color_Black);
+
+  MLX90640_SetRefreshRate(MLX90640_ADDR, 5);
+  uint8_t error = MLX90640_SetChessMode(MLX90640_ADDR);
+  if(error!= 0) {
+    LCD_ShowString(0, 0, "set chess mode error", Color_White, Color_Black);
+  }
+  MLX90640_DumpEE(MLX90640_ADDR, eeMLX90640);
+  MLX90640_ExtractParameters(eeMLX90640, &mlx90640);
+
+  MLX90640_GetFrameData(MLX90640_ADDR, frame);
+  
+  ta = MLX90640_GetTa(frame, &mlx90640);
+  tr = ta - TA_SHIFT;
+  MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
+
+  uint16_t testNum = (uint16_t)(mlx90640To[0] * 100);
+  uint16_t testNum2 = (uint16_t)(mlx90640To[1] * 100);
+  // LCD_ShowNum(1, 0, testNum, 4, Color_White, Color_Black);
+
+  // uint16_t data[768];
+  // MLX90640_I2CRead(0x33, 0x400, 768, data);
+  LCD_ShowHexNum(2, 0, frame[767], 4, Color_White, Color_Black);
+  LCD_ShowHexNum(2, 5, frame[766], 4, Color_White, Color_Black);
+  LCD_ShowHexNum(2, 10, frame[765], 4, Color_White, Color_Black);
+  LCD_ShowHexNum(3, 0, frame[0], 4, Color_White, Color_Black);
+  LCD_ShowHexNum(3, 5, frame[1], 4, Color_White, Color_Black);
+  LCD_ShowHexNum(3, 10, frame[2], 4, Color_White, Color_Black);
+  LCD_ShowNum(1, 0, testNum, 4, Color_White, Color_Black);
+  LCD_ShowNum(1, 5, testNum2, 4, Color_White, Color_Black);
+
 
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
   MX_FREERTOS_Init();
 
   /* Start scheduler */
