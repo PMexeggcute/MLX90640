@@ -18,8 +18,11 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "MLX90640_API.h"
 #include "cmsis_os.h"
 #include "i2c.h"
+#include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_def.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -76,10 +79,10 @@ void MX_FREERTOS_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *I2c_Handle){
-	mlx90640_step=1;
-	MLX90640_GetFrameData_IT(MLX90640_ADDR, frame,&mlx90640_step);
-}
+// void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *I2c_Handle){
+// 	mlx90640_step=1;
+// 	MLX90640_GetFrameData_IT(MLX90640_ADDR, frame,&mlx90640_step);
+// }
 
 // int __io_putchar(int ch)
 // {
@@ -122,7 +125,6 @@ int main(void)
 
   float ta, tr;
 
-
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -153,45 +155,51 @@ int main(void)
   LCD_Init();
   LCD_FillScreen(0x0000);
 
-  uint16_t test = 0;
-  MLX90640_I2CRead(MLX90640_ADDR, 0x800D, 1, &test);
-  LCD_ShowHexNum(1, 0, test, 4, Color_White, Color_Black);
+  // uint16_t test = 0;  
+  // MLX90640_I2CRead(MLX90640_ADDR, 0x800D, 1, &test);
+  // LCD_ShowHexNum(1, 0, test, 4, Color_White, Color_Black);
 
+  //init and config MLX90640
   MLX90640_SetRefreshRate(MLX90640_ADDR, 5);
   uint8_t error = MLX90640_SetChessMode(MLX90640_ADDR);
   if(error!= 0) {
     LCD_ShowString(0, 0, "set chess mode error", Color_White, Color_Black);
   }
+
   MLX90640_DumpEE(MLX90640_ADDR, eeMLX90640);
   MLX90640_ExtractParameters(eeMLX90640, &mlx90640);
 
-  MLX90640_GetFrameData(MLX90640_ADDR, frame);
-  
+  uint16_t statusRegister;
+  do {
+      MLX90640_I2CRead(MLX90640_ADDR, MLX90640_STATUS_REG, 1, &statusRegister);
+      HAL_Delay(1);
+      my_printf("waiting for subpage 0\n");
+  } while((statusRegister & 0x000F) != 0b1000);
+  uint8_t subpage = MLX90640_GetFrameData(MLX90640_ADDR, frame);
+  if(subpage != 0) {
+    my_printf("getting subpage0 error\n");
+  }
+  my_printf("got subpage0\n");
+
   ta = MLX90640_GetTa(frame, &mlx90640);
   tr = ta - TA_SHIFT;
   MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
-  MLX90640_GetFrameData(MLX90640_ADDR, frame);
+
+  subpage = MLX90640_GetFrameData(MLX90640_ADDR, frame);
+  if(subpage != 1) {
+    my_printf("getting subpage0 error\n");
+  }
+  my_printf("got subpage1\n");
+
+  ta = MLX90640_GetTa(frame, &mlx90640);
+  tr = ta - TA_SHIFT;
   MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
 
-  // LCD_ShowNum(1, 0, testNum, 4, Color_White, Color_Black);
+  my_printf("data ready\n");
 
-  // uint16_t data[768];
-  // MLX90640_I2CRead(0x33, 0x400, 768, data);
+  my_printf("temperature[0]: %f\n tep[767]: %f\n", mlx90640To[0], mlx90640To[767]);
 
-  // for(int i = 0; i < 0x30; i++) {
-  //   my_printf("eeprom %x data: %x\n", i, eeMLX90640[i]);
-  // }
-  // my_printf("eeprom last %x\n", eeMLX90640[831]);
-
-  //   for(int i = 0; i < 0x30; i++) {
-  //   my_printf("framedata %x data: %x\n", i, frame[i]);
-  // }
-
-  // my_printf("%x\n", eeMLX90640[0x20]);
-  // float tmp = 1.2;
-  // my_printf("float data test :%f\n", tmp);
-  my_printf("temperature[0]: %f\n tep[1]: %f\n", mlx90640To[0], mlx90640To[1]);
-
+  MLX90640_GetImage(frame, &mlx90640, mlx90640To);
 
   /* USER CODE END 2 */
 

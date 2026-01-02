@@ -178,56 +178,56 @@ int MLX90640_GetFrameData(uint8_t slaveAddr, uint16_t *frameData)
     return frameData[833];    
 }
 
-int MLX90640_GetFrameData_IT(uint8_t slaveAddr, uint16_t *frameData,uint16_t *step)
-{
-	// uint16_t dataReady = 0;
-    uint16_t controlRegister1;
-    uint16_t statusRegister;
-    int error = 1;
-    uint16_t data[64];
-    uint8_t cnt = 0;
+// int MLX90640_GetFrameData_IT(uint8_t slaveAddr, uint16_t *frameData,uint16_t *step)
+// {
+// 	// uint16_t dataReady = 0;
+//     uint16_t controlRegister1;
+//     uint16_t statusRegister;
+//     int error = 1;
+//     uint16_t data[64];
+//     uint8_t cnt = 0;
 	
-    uint8_t* bp = (uint8_t*) frameData; 
-    if(*step==0){								//中断读768*2字节
-		MLX90640_I2CRead(slaveAddr, 0x8000, 1, &statusRegister);
-		frameData[833] = statusRegister & 0x0001;
-		error = MLX90640_I2CWrite(slaveAddr, 0x8000, 0x0030);
-		if(error == -1)return error;
-		HAL_I2C_Mem_Read_IT(&hi2c1,slaveAddr<<1,0x0400,I2C_MEMADD_SIZE_16BIT,bp,768*2);
-		*step=1;
-		return 0;
-	}
-	if(*step==1){								//中断内调换高低字节
-		uint16_t k = 0;
-		for(k=0;k<768*2; k+=2) {
-			uint8_t tmpbytelsb = bp[k+1];
-			bp[k+1] = bp[k];
-			bp[k] = tmpbytelsb;
-		}
-		*step=2;
-		return 0;
-    }
-	if(*step==2){      							//主程序执行剩余步骤
+//     uint8_t* bp = (uint8_t*) frameData; 
+//     if(*step==0){								//中断读768*2字节
+// 		MLX90640_I2CRead(slaveAddr, 0x8000, 1, &statusRegister);
+// 		frameData[833] = statusRegister & 0x0001;
+// 		error = MLX90640_I2CWrite(slaveAddr, 0x8000, 0x0030);
+// 		if(error == -1)return error;
+// 		HAL_I2C_Mem_Read_IT(&hi2c1,slaveAddr<<1,0x0400,I2C_MEMADD_SIZE_16BIT,bp,768*2);
+// 		*step=1;
+// 		return 0;
+// 	}
+// 	if(*step==1){								//中断内调换高低字节
+// 		uint16_t k = 0;
+// 		for(k=0;k<768*2; k+=2) {
+// 			uint8_t tmpbytelsb = bp[k+1];
+// 			bp[k+1] = bp[k];
+// 			bp[k] = tmpbytelsb;
+// 		}
+// 		*step=2;
+// 		return 0;
+//     }
+// 	if(*step==2){      							//主程序执行剩余步骤
 		
-		error = MLX90640_I2CRead(slaveAddr, 0x0700, 64, data); 
-		if(error != 0)return error;  
-		error = MLX90640_I2CRead(slaveAddr, 0x800D, 1, &controlRegister1);
-		frameData[832] = controlRegister1;
-		if(error != 0)return error;
+// 		error = MLX90640_I2CRead(slaveAddr, 0x0700, 64, data); 
+// 		if(error != 0)return error;  
+// 		error = MLX90640_I2CRead(slaveAddr, 0x800D, 1, &controlRegister1);
+// 		frameData[832] = controlRegister1;
+// 		if(error != 0)return error;
     
-		error = ValidateAuxData(data);
-		if(error == 0)
-		{
-			for(cnt=0; cnt<64; cnt++)
-			{
-				frameData[cnt+768] = data[cnt];
-			}
-		}        
-		error = ValidateFrameData(frameData);
-		if (error != 0)return error;
-	}
-	return 0;	
-}
+// 		error = ValidateAuxData(data);
+// 		if(error == 0)
+// 		{
+// 			for(cnt=0; cnt<64; cnt++)
+// 			{
+// 				frameData[cnt+768] = data[cnt];
+// 			}
+// 		}        
+// 		error = ValidateFrameData(frameData);
+// 		if (error != 0)return error;
+// 	}
+// 	return 0;	
+// }
 
 static int ValidateFrameData(uint16_t *frameData)
 {
