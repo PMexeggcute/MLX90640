@@ -54,26 +54,33 @@
 
 int MLX90640_I2CRead(uint8_t slaveAddr,uint16_t startAddress, uint16_t nMemAddressRead, uint16_t *data) {
     uint8_t ack = 0;
+    uint16_t cnt = 0;
+    uint8_t* bp = (uint8_t*) data;
 
     if(nMemAddressRead > 300) {
 
-        ack = HAL_I2C_Mem_Read(&hi2c1, slaveAddr << 1, startAddress, I2C_MEMADD_SIZE_16BIT, (uint8_t *)data - 1, nMemAddressRead, 500);
+        ack = HAL_I2C_Mem_Read(&hi2c1, slaveAddr << 1, startAddress, I2C_MEMADD_SIZE_16BIT, bp, nMemAddressRead, 500);
 
         if(ack != HAL_OK) {
             return -1;
         }
 
         ack = HAL_I2C_Mem_Read(&hi2c1, slaveAddr << 1, startAddress + nMemAddressRead, 
-            I2C_MEMADD_SIZE_16BIT, (uint8_t *)data + nMemAddressRead - 1, nMemAddressRead + 1, 500);
+            I2C_MEMADD_SIZE_16BIT, bp + nMemAddressRead, nMemAddressRead, 500);
 
         if(ack != HAL_OK) {
             return -1;
         }
 
+        for(cnt=0; cnt < nMemAddressRead*2; cnt+=2) {
+            uint8_t tmpbytelsb = bp[cnt+1];
+            bp[cnt+1] = bp[cnt];
+            bp[cnt] = tmpbytelsb;
+        }
+
     }
 
     else {
-        uint8_t* bp = (uint8_t*) data;
 
         ack = 0;                               
         int cnt = 0;
@@ -97,8 +104,11 @@ int MLX90640_I2CRead(uint8_t slaveAddr,uint16_t startAddress, uint16_t nMemAddre
 
 int MLX90640_I2CWrite(uint8_t slaveAddr,uint16_t writeAddress, uint16_t data) {
     uint8_t ack = 0;
-    uint8_t cmd[2];
+    uint8_t cmd[2] = {0};
     static uint16_t dataCheck;
+
+    cmd[0] = data >> 8;
+    cmd[1] = data & 0xFF;
 
     ack = HAL_I2C_Mem_Write(&hi2c1, slaveAddr << 1, writeAddress, I2C_MEMADD_SIZE_16BIT, cmd, sizeof(cmd), 500);
     
@@ -106,7 +116,7 @@ int MLX90640_I2CWrite(uint8_t slaveAddr,uint16_t writeAddress, uint16_t data) {
         return -1;
     }
 
-    ack = HAL_I2C_Mem_Read(&hi2c1, slaveAddr << 1, writeAddress, I2C_MEMADD_SIZE_16BIT, (uint8_t *)&dataCheck - 1, 2, 500);
+    ack = MLX90640_I2CRead(slaveAddr, writeAddress, 1, &dataCheck);
 
     if(ack != HAL_OK || dataCheck != data) {
         return -2;

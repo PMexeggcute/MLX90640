@@ -69,3 +69,8 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
     # Add user defined libraries
 )
+
+# 添加链接器标志
+target_link_options(${PROJECT_NAME} PRIVATE
+    -u _printf_float
+)

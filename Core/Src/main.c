@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "MLX90640_API.h"
 #include "cmsis_os.h"
 #include "i2c.h"
 #include "usart.h"
@@ -29,6 +28,9 @@
 #include "LCD.h"
 #include "MLX90640_I2C_Driver.h"
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -79,6 +81,34 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *I2c_Handle){
 	MLX90640_GetFrameData_IT(MLX90640_ADDR, frame,&mlx90640_step);
 }
 
+// int __io_putchar(int ch)
+// {
+//     HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+//     return ch;
+// }
+
+void my_printf(const char *format, ...)
+{
+    char buffer[256];  // 缓冲区大小可以根据需要调整
+    va_list args;
+    
+    va_start(args, format);
+    vsnprintf(buffer, sizeof(buffer), format, args);
+    va_end(args);
+    
+    HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), 1000);
+}
+
+// void uart_printf(const char *format, ...)
+// {
+//     char buffer[256];
+//     va_list args;
+//     va_start(args, format);
+//     vsnprintf(buffer, sizeof(buffer), format, args);
+//     va_end(args);
+//     HAL_UART_Transmit(&huart1, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
+// }
+
 /* USER CODE END 0 */
 
 /**
@@ -90,14 +120,15 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
 
-  float ta, tr, vdd;
+  float ta, tr;
+
 
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-    HAL_Init();
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -116,6 +147,7 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+  // my_printf("test\n");
 
 
   LCD_Init();
@@ -138,27 +170,33 @@ int main(void)
   ta = MLX90640_GetTa(frame, &mlx90640);
   tr = ta - TA_SHIFT;
   MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
+  MLX90640_GetFrameData(MLX90640_ADDR, frame);
+  MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
 
-  uint16_t testNum = (uint16_t)(mlx90640To[0] * 100);
-  uint16_t testNum2 = (uint16_t)(mlx90640To[1] * 100);
   // LCD_ShowNum(1, 0, testNum, 4, Color_White, Color_Black);
 
   // uint16_t data[768];
   // MLX90640_I2CRead(0x33, 0x400, 768, data);
-  LCD_ShowHexNum(2, 0, frame[767], 4, Color_White, Color_Black);
-  LCD_ShowHexNum(2, 5, frame[766], 4, Color_White, Color_Black);
-  LCD_ShowHexNum(2, 10, frame[765], 4, Color_White, Color_Black);
-  LCD_ShowHexNum(3, 0, frame[0], 4, Color_White, Color_Black);
-  LCD_ShowHexNum(3, 5, frame[1], 4, Color_White, Color_Black);
-  LCD_ShowHexNum(3, 10, frame[2], 4, Color_White, Color_Black);
-  LCD_ShowNum(1, 0, testNum, 4, Color_White, Color_Black);
-  LCD_ShowNum(1, 5, testNum2, 4, Color_White, Color_Black);
+
+  // for(int i = 0; i < 0x30; i++) {
+  //   my_printf("eeprom %x data: %x\n", i, eeMLX90640[i]);
+  // }
+  // my_printf("eeprom last %x\n", eeMLX90640[831]);
+
+  //   for(int i = 0; i < 0x30; i++) {
+  //   my_printf("framedata %x data: %x\n", i, frame[i]);
+  // }
+
+  // my_printf("%x\n", eeMLX90640[0x20]);
+  // float tmp = 1.2;
+  // my_printf("float data test :%f\n", tmp);
+  my_printf("temperature[0]: %f\n tep[1]: %f\n", mlx90640To[0], mlx90640To[1]);
 
 
   /* USER CODE END 2 */
 
   /* Init scheduler */
-   osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
   MX_FREERTOS_Init();
 
   /* Start scheduler */

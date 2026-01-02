@@ -986,7 +986,7 @@ static void ExtractAlphaParameters(uint16_t *eeData, paramsMLX90640 *mlx90640)
             }
             alphaTemp[p] = alphaTemp[p]*(1 << accRemScale);
             alphaTemp[p] = (alphaRef + (accRow[i] << accRowScale) + (accColumn[j] << accColumnScale) + alphaTemp[p]);
-            alphaTemp[p] = alphaTemp[p] / POW2(alphaScale);
+            alphaTemp[p] = alphaTemp[p] / pow(2,(double)alphaScale);
             alphaTemp[p] = alphaTemp[p] - mlx90640->tgc * (mlx90640->cpAlpha[0] + mlx90640->cpAlpha[1])/2;
             alphaTemp[p] = SCALEALPHA/alphaTemp[p];
         }
@@ -1010,7 +1010,7 @@ static void ExtractAlphaParameters(uint16_t *eeData, paramsMLX90640 *mlx90640)
     
     for(int i = 0; i < MLX90640_PIXEL_NUM; i++)
     {
-        temp = alphaTemp[i] * POW2(alphaScale);        
+        temp = alphaTemp[i] * pow(2,(double)alphaScale);        
         mlx90640->alpha[i] = (temp + 0.5);        
         
     } 
