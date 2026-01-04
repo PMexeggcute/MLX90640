@@ -48,6 +48,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/LCD.c
     Core/Src/MLX90640_API.c
     Core/Src/MLX90640_I2C_Driver.c
+    Core/Src/IMG.c
 )
 
 # Add include paths
