@@ -65,7 +65,9 @@ int MLX90640_I2CRead(uint8_t slaveAddr,uint16_t startAddress, uint16_t nMemAddre
             return -1;
         }
 
-        ack = HAL_I2C_Mem_Read(&hi2c1, slaveAddr << 1, startAddress + nMemAddressRead, 
+        // HAL_Delay(1);   //------------------------------------------test------------------------------------------------------
+
+        ack = HAL_I2C_Mem_Read(&hi2c1, slaveAddr << 1, startAddress + nMemAddressRead / 2, 
             I2C_MEMADD_SIZE_16BIT, bp + nMemAddressRead, nMemAddressRead, 500);
 
         if(ack != HAL_OK) {

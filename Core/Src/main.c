@@ -34,6 +34,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include "IMG.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,12 +45,15 @@
 #define  TA_SHIFT 8 //Default shift for MLX90640 in open air
 
 uint16_t frame[834];
-uint16_t eeMLX90640[832];  
+uint16_t eeMLX90640[832];
 float mlx90640To[768];
 paramsMLX90640 mlx90640;
 float mlx90640To[768];
 float emissivity=0.95;
 uint16_t mlx90640_step=0;
+
+// uint16_t show_list[128*160];
+
 
 /* USER CODE END PTD */
 
@@ -169,17 +174,34 @@ int main(void)
   MLX90640_DumpEE(MLX90640_ADDR, eeMLX90640);
   MLX90640_ExtractParameters(eeMLX90640, &mlx90640);
 
+
+
   uint16_t statusRegister;
   do {
       MLX90640_I2CRead(MLX90640_ADDR, MLX90640_STATUS_REG, 1, &statusRegister);
       HAL_Delay(1);
       my_printf("waiting for subpage 0\n");
   } while((statusRegister & 0x000F) != 0b1000);
+
+  // uint16_t test;
+
+  // MLX90640_I2CRead(MLX90640_ADDR, 0x700, 1, &test);
+  // my_printf("data read 420: %x\n", test);
+
+
+
+
   uint8_t subpage = MLX90640_GetFrameData(MLX90640_ADDR, frame);
   if(subpage != 0) {
     my_printf("getting subpage0 error\n");
   }
   my_printf("got subpage0\n");
+
+  // for(int i = 0; i < 768; i++) {
+  //   my_printf("sp1[%d]: %x\n", i, frame[i]);
+  // }
+
+
 
   ta = MLX90640_GetTa(frame, &mlx90640);
   tr = ta - TA_SHIFT;
@@ -191,15 +213,47 @@ int main(void)
   }
   my_printf("got subpage1\n");
 
+
+  // for(int i = 0; i < 768; i++) {
+  //   my_printf("sp2[%d]: %x\n", i, frame[i]);
+  // }
+
+
+
+
   ta = MLX90640_GetTa(frame, &mlx90640);
   tr = ta - TA_SHIFT;
   MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
 
+  // my_printf("data[0]: %x && data[420]: %x\n", frame[0],frame[420]);
+
   my_printf("data ready\n");
 
-  my_printf("temperature[0]: %f\n tep[767]: %f\n", mlx90640To[0], mlx90640To[767]);
 
-  MLX90640_GetImage(frame, &mlx90640, mlx90640To);
+
+
+  // for(int i = 0; i < 768; i++) {
+  //   my_printf("temp[%d]: %f\n", i, mlx90640To[i]);
+  // }
+
+  
+  // MLX90640_I2CRead(MLX90640_ADDR, 0x710, 1, &test);
+  // my_printf("data read 0x710: %x\n", test);
+
+
+  float maxTemp, minTemp = 0;
+  uint16_t maxAddr[2], minAddr[2];
+  temp_limit(mlx90640To, &maxTemp, maxAddr, &minTemp, minAddr);
+  uint16_t color_list[256];
+  color_listcode(color_list, 1);
+  display_code(mlx90640To, color_list, 1, maxTemp, minTemp);
+
+  // for(uint8_t i = 0; i < 128; i++) {
+  //   for(uint8_t j = 0; j < 160; j++) {
+  //     LCD_DrawPoint(i, j, show_list[i*160+j]);
+  //   }
+  // }
+
 
   /* USER CODE END 2 */
 

@@ -38,4 +38,6 @@ void LCD_ShowHexNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Lengt
 
 void LCD_ShowBinNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Length, uint16_t color, uint16_t bgcolor);
 
+void LCD_DrawPoint(uint8_t x, uint8_t y, uint16_t color);
+
 #endif

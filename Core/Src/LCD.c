@@ -1,6 +1,7 @@
 #include "main.h"
 #include "LCD_Font.h"   // F8x16 字库
 #include "stm32f401xc.h"    // STM32F401xC 头文件
+#include <stdint.h>
 
 /* 引脚配置 */
 //寄存器快速操作
@@ -249,3 +250,15 @@ void LCD_ShowBinNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Lengt
 	}
 }
 
+/**
+ * @brief LCD显示数字（八进制，正数）
+ * 
+ * @param x 要显示的x坐标
+ * @param y 要显示的y坐标
+ * @param color 要显示的颜色
+ */
+void LCD_DrawPoint(uint8_t x, uint8_t y, uint16_t color) {
+    LCD_SetAddrWindow(x, y, x, y);
+    LCD_WriteData(color >> 8); // 高字节颜色
+    LCD_WriteData(color & 0xFF); // 低字节颜色
+}
