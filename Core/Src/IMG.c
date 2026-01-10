@@ -477,7 +477,7 @@ void display_code(float *flist,uint16_t *color_list,uint16_t size,float tmax,flo
                 float fy = by / 5.0f;        // 纵向插值比例：0.0 ~ 1.0（第0行和第5行对应原始行）
 
                 // 先横向插值得到上下两条边
-                uint16_t top    = (uint16_t)tl + (uint16_t)((tr - tl) * (sx * 4 + 3) / 3.0f * fy);
+                // uint16_t top    = (uint16_t)tl + (uint16_t)((tr - tl) * (sx * 4 + 3) / 3.0f * fy);
                 // 正确方式：先算上下两行的插值点
                 uint16_t left   = (uint16_t)tl + (uint16_t)((bl - tl) * fy);
                 uint16_t right  = (uint16_t)tr + (uint16_t)((br - tr) * fy);

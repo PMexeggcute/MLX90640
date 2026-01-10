@@ -1,3 +1,4 @@
+#include "LCD.h"
 #include "main.h"
 #include "LCD_Font.h"   // F8x16 字库
 #include "stm32f401xc.h"    // STM32F401xC 头文件
@@ -145,13 +146,46 @@ void LCD_ShowChar(uint8_t x, uint8_t y, char ch, uint16_t color, uint16_t bgcolo
         {
             if (line & (0x80 >> j))
             {
-                LCD_WriteData(color >> 8); // 高字节白色
-                LCD_WriteData(color & 0xFF); // 低字节白色
+                LCD_WriteData(color >> 8); // 高字节颜色
+                LCD_WriteData(color & 0xFF); // 低字节颜色
             }
             else
             {
-                LCD_WriteData(bgcolor >> 8); // 黑色背景
+                LCD_WriteData(bgcolor >> 8); // 背景
                 LCD_WriteData(bgcolor & 0xFF);
+            }
+        }
+    }
+}
+
+void LCD_ShowCharTrpbg(uint8_t x, uint8_t y, char ch, uint16_t color) {
+    y = y * 8 + 1;
+	x = 112 - 16 * x;		//针对设备修正
+	
+    for (uint8_t i = 0; i < 8; i++)  // 每行
+    {
+        uint8_t line = LCD_F8x16[ch - ' '][i];
+        for (uint8_t j = 0; j < 8; j++)
+        {
+            if (line & (0x80 >> j))
+            {
+                LCD_SetAddrWindow(x + 8 + j, y + i, x + 8 + j, y + i);
+                LCD_WriteData(color >> 8); // 高字节颜色
+                LCD_WriteData(color & 0xFF); // 低字节颜色
+            }
+        }
+    }
+	
+	for (uint8_t i = 8; i >= 8 && i < 16; i++)  // 每行
+    {
+        uint8_t line = LCD_F8x16[ch - ' '][i];
+        for (uint8_t j = 0; j < 8; j++)
+        {
+            if (line & (0x80 >> j))
+            {
+                LCD_SetAddrWindow(x - 8 + 8 + j, y + i - 8, x + j, y + i - 8);
+                LCD_WriteData(color >> 8); // 高字节颜色
+                LCD_WriteData(color & 0xFF); // 低字节颜色
             }
         }
     }
@@ -167,6 +201,14 @@ void LCD_ShowString(uint8_t x, uint8_t y, char* str, uint16_t color, uint16_t bg
     }
 }
 
+void LCD_ShowStringTrpbg(uint8_t x, uint8_t y, char* str, uint16_t color) {
+    while (*str)
+    {
+        LCD_ShowCharTrpbg(x, y, *str++, color);
+        y += 1;
+        if (y > 159) break;
+    }
+}
 
 uint32_t LCD_Pow(uint32_t X, uint32_t Y)
 {
@@ -201,9 +243,28 @@ void LCD_ShowSignedNum(uint8_t Line, uint8_t Column, int32_t Number, uint8_t Len
 		LCD_ShowChar(Line, Column, '-', color, bgcolor);
 		Number1 = -Number;
 	}
-	for (i = 0; i < Length; i++)							
+	for (i = 1; i < Length; i++)							
 	{
 		LCD_ShowChar(Line, Column + i, Number1 / LCD_Pow(10, Length - i - 1) % 10 + '0', color, bgcolor);
+	}
+}
+
+void LCD_ShowSignedNumTrpbg(uint8_t Line, uint8_t Column, int32_t Number, uint8_t Length, uint16_t color) {
+	uint8_t i;
+	uint32_t Number1;
+	if (Number >= 0)
+	{
+		LCD_ShowCharTrpbg(Line, Column, '+', color);
+		Number1 = Number;
+	}
+	else
+	{
+		LCD_ShowCharTrpbg(Line, Column, '-', color);
+		Number1 = -Number;
+	}
+	for (i = 1; i < Length; i++)							
+	{
+		LCD_ShowCharTrpbg(Line, Column + i, Number1 / LCD_Pow(10, Length - i - 1) % 10 + '0', color);
 	}
 }
 

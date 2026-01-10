@@ -18,37 +18,34 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "MLX90640_API.h"
+#include "LCD.h"
 #include "cmsis_os.h"
 #include "i2c.h"
-#include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_def.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "LCD.h"
-#include "MLX90640_I2C_Driver.h"
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
-#include "IMG.h"
+// #include "LCD.h"
+// #include "MLX90640_I2C_Driver.h"
+// #include <stdint.h>
+// #include <stdio.h>
+// #include <string.h>
+// #include <stdarg.h>
+// #include "IMG.h"
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-#define MLX90640_ADDR 0x33
-#define  TA_SHIFT 8 //Default shift for MLX90640 in open air
 
-uint16_t frame[834];
-uint16_t eeMLX90640[832];
-float mlx90640To[768];
-paramsMLX90640 mlx90640;
-float mlx90640To[768];
+
+
+uint16_t frame[834] = {0};
+uint16_t eeMLX90640[832] = {0};
+float mlx90640To[768] = {0};
+paramsMLX90640 mlx90640 = {0};
 float emissivity=0.95;
 uint16_t mlx90640_step=0;
 
@@ -128,7 +125,7 @@ int main(void)
 
   /* USER CODE BEGIN 1 */
 
-  float ta, tr;
+  // float ta, tr;
 
   /* USER CODE END 1 */
 
@@ -160,6 +157,9 @@ int main(void)
   LCD_Init();
   LCD_FillScreen(0x0000);
 
+  // LCD_ShowSignedNumTrpbg(1, 1, 12, 3, Color_White);
+  // LCD_ShowSignedNum(2, 1, 12, 3, Color_White, Color_Black);
+
   // uint16_t test = 0;  
   // MLX90640_I2CRead(MLX90640_ADDR, 0x800D, 1, &test);
   // LCD_ShowHexNum(1, 0, test, 4, Color_White, Color_Black);
@@ -176,77 +176,77 @@ int main(void)
 
 
 
-  uint16_t statusRegister;
-  do {
-      MLX90640_I2CRead(MLX90640_ADDR, MLX90640_STATUS_REG, 1, &statusRegister);
-      HAL_Delay(1);
-      my_printf("waiting for subpage 0\n");
-  } while((statusRegister & 0x000F) != 0b1000);
+  // uint16_t statusRegister;
+  // do {
+  //     MLX90640_I2CRead(MLX90640_ADDR, MLX90640_STATUS_REG, 1, &statusRegister);
+  //     HAL_Delay(1);
+  //     my_printf("waiting for subpage 0\n");
+  // } while((statusRegister & 0x000F) != 0b1000);
 
-  // uint16_t test;
+  // // uint16_t test;
 
-  // MLX90640_I2CRead(MLX90640_ADDR, 0x700, 1, &test);
-  // my_printf("data read 420: %x\n", test);
-
-
+  // // MLX90640_I2CRead(MLX90640_ADDR, 0x700, 1, &test);
+  // // my_printf("data read 420: %x\n", test);
 
 
-  uint8_t subpage = MLX90640_GetFrameData(MLX90640_ADDR, frame);
-  if(subpage != 0) {
-    my_printf("getting subpage0 error\n");
-  }
-  my_printf("got subpage0\n");
 
-  // for(int i = 0; i < 768; i++) {
-  //   my_printf("sp1[%d]: %x\n", i, frame[i]);
+
+  // uint8_t subpage = MLX90640_GetFrameData(MLX90640_ADDR, frame);
+  // if(subpage != 0) {
+  //   my_printf("getting subpage0 error\n");
   // }
+  // my_printf("got subpage0\n");
+
+  // // for(int i = 0; i < 768; i++) {
+  // //   my_printf("sp1[%d]: %x\n", i, frame[i]);
+  // // }
 
 
 
-  ta = MLX90640_GetTa(frame, &mlx90640);
-  tr = ta - TA_SHIFT;
-  MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
+  // ta = MLX90640_GetTa(frame, &mlx90640);
+  // tr = ta - TA_SHIFT;
+  // MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
 
-  subpage = MLX90640_GetFrameData(MLX90640_ADDR, frame);
-  if(subpage != 1) {
-    my_printf("getting subpage0 error\n");
-  }
-  my_printf("got subpage1\n");
-
-
-  // for(int i = 0; i < 768; i++) {
-  //   my_printf("sp2[%d]: %x\n", i, frame[i]);
+  // subpage = MLX90640_GetFrameData(MLX90640_ADDR, frame);
+  // if(subpage != 1) {
+  //   my_printf("getting subpage0 error\n");
   // }
+  // my_printf("got subpage1\n");
+
+
+  // // for(int i = 0; i < 768; i++) {
+  // //   my_printf("sp2[%d]: %x\n", i, frame[i]);
+  // // }
 
 
 
 
-  ta = MLX90640_GetTa(frame, &mlx90640);
-  tr = ta - TA_SHIFT;
-  MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
+  // ta = MLX90640_GetTa(frame, &mlx90640);
+  // tr = ta - TA_SHIFT;
+  // MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
 
-  // my_printf("data[0]: %x && data[420]: %x\n", frame[0],frame[420]);
+  // // my_printf("data[0]: %x && data[420]: %x\n", frame[0],frame[420]);
 
-  my_printf("data ready\n");
-
-
+  // my_printf("data ready\n");
 
 
-  // for(int i = 0; i < 768; i++) {
-  //   my_printf("temp[%d]: %f\n", i, mlx90640To[i]);
-  // }
+
+
+  // // for(int i = 0; i < 768; i++) {
+  // //   my_printf("temp[%d]: %f\n", i, mlx90640To[i]);
+  // // }
 
   
-  // MLX90640_I2CRead(MLX90640_ADDR, 0x710, 1, &test);
-  // my_printf("data read 0x710: %x\n", test);
+  // // MLX90640_I2CRead(MLX90640_ADDR, 0x710, 1, &test);
+  // // my_printf("data read 0x710: %x\n", test);
 
 
-  float maxTemp, minTemp = 0;
-  uint16_t maxAddr[2], minAddr[2];
-  temp_limit(mlx90640To, &maxTemp, maxAddr, &minTemp, minAddr);
-  uint16_t color_list[256];
-  color_listcode(color_list, 1);
-  display_code(mlx90640To, color_list, 1, maxTemp, minTemp);
+  // float maxTemp, minTemp = 0;
+  // uint16_t maxAddr[2], minAddr[2];
+  // temp_limit(mlx90640To, &maxTemp, maxAddr, &minTemp, minAddr);
+  // uint16_t color_list[256];
+  // color_listcode(color_list, 1);
+  // display_code(mlx90640To, color_list, 1, maxTemp, minTemp);
 
   // for(uint8_t i = 0; i < 128; i++) {
   //   for(uint8_t j = 0; j < 160; j++) {

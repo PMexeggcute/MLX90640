@@ -32,6 +32,14 @@ extern "C" {
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "LCD.h"
+#include "MLX90640_I2C_Driver.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#include "IMG.h"
+
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -41,7 +49,10 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
+extern uint16_t frame[834];
+extern uint16_t eeMLX90640[832];
+extern float mlx90640To[768];
+extern paramsMLX90640 mlx90640;
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
@@ -53,7 +64,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void my_printf(const char *format, ...);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -70,6 +81,8 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 
+#define MLX90640_ADDR 0x33
+#define  TA_SHIFT 8 //Default shift for MLX90640 in open air
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

@@ -19,6 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "FreeRTOS.h"
+#include "LCD.h"
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
@@ -27,6 +28,7 @@
 /* USER CODE BEGIN Includes */
 #include "i2c.h"
 #include "MLX90640_API.h"
+#include <stdint.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,11 +57,11 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for MLX90640GetData */
-osThreadId_t MLX90640GetDataHandle;
-const osThreadAttr_t MLX90640GetData_attributes = {
-  .name = "MLX90640GetData",
-  .stack_size = 128 * 4,
+/* Definitions for MLX90640Show */
+osThreadId_t MLX90640ShowHandle;
+const osThreadAttr_t MLX90640Show_attributes = {
+  .name = "MLX90640Show",
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -103,8 +105,8 @@ void MX_FREERTOS_Init(void) {
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
-  /* creation of MLX90640GetData */
-  MLX90640GetDataHandle = osThreadNew(MLX90640GetDataTask, NULL, &MLX90640GetData_attributes);
+  /* creation of MLX90640Show */
+  MLX90640ShowHandle = osThreadNew(MLX90640GetDataTask, NULL, &MLX90640Show_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -129,7 +131,12 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
+
+
+
     osDelay(1);
+
+
   }
   /* USER CODE END StartDefaultTask */
 }
@@ -147,6 +154,87 @@ __weak void MLX90640GetDataTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
+
+    
+    float ta, tr;
+    uint16_t statusRegister;
+    do {
+        MLX90640_I2CRead(MLX90640_ADDR, MLX90640_STATUS_REG, 1, &statusRegister);
+        osDelay(1);
+        my_printf("waiting for subpage 0\n");
+    } while((statusRegister & 0x000F) != 0b1000);
+
+    // uint16_t test;
+
+    // MLX90640_I2CRead(MLX90640_ADDR, 0x700, 1, &test);
+    // my_printf("data read 420: %x\n", test);
+
+
+
+
+    uint8_t subpage = MLX90640_GetFrameData(MLX90640_ADDR, frame);
+    if(subpage != 0) {
+      my_printf("getting subpage0 error\n");
+    }
+    my_printf("got subpage0\n");
+
+    // for(int i = 0; i < 768; i++) {
+    //   my_printf("sp1[%d]: %x\n", i, frame[i]);
+    // }
+
+
+
+    ta = MLX90640_GetTa(frame, &mlx90640);
+    tr = ta - TA_SHIFT;
+    float emissivity = 0.95;
+    MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
+
+    subpage = MLX90640_GetFrameData(MLX90640_ADDR, frame);
+    if(subpage != 1) {
+      my_printf("getting subpage0 error\n");
+    }
+    my_printf("got subpage1\n");
+
+
+    // for(int i = 0; i < 768; i++) {
+    //   my_printf("sp2[%d]: %x\n", i, frame[i]);
+    // }
+
+
+
+
+    ta = MLX90640_GetTa(frame, &mlx90640);
+    tr = ta - TA_SHIFT;
+    MLX90640_CalculateTo(frame, &mlx90640, emissivity, tr, mlx90640To);
+
+    // my_printf("data[0]: %x && data[420]: %x\n", frame[0],frame[420]);
+
+    my_printf("data ready\n");
+
+
+
+
+    // for(int i = 0; i < 768; i++) {
+    //   my_printf("temp[%d]: %f\n", i, mlx90640To[i]);
+    // }
+
+    
+    // MLX90640_I2CRead(MLX90640_ADDR, 0x710, 1, &test);
+    // my_printf("data read 0x710: %x\n", test);
+
+
+    float maxTemp, minTemp = 0;
+    uint16_t maxAddr[2], minAddr[2];
+    temp_limit(mlx90640To, &maxTemp, maxAddr, &minTemp, minAddr);
+    uint16_t color_list[256];
+    color_listcode(color_list, 1);
+    display_code(mlx90640To, color_list, 1, maxTemp, minTemp);
+    LCD_ShowStringTrpbg(0, 0, "max:", Color_Black);
+    LCD_ShowSignedNumTrpbg(0, 4, (uint32_t)maxTemp, 3, Color_Black);
+    LCD_ShowStringTrpbg(0, 8, "min:", Color_Black);
+    LCD_ShowSignedNumTrpbg(0, 12, (uint32_t)minTemp, 3, Color_Black);
+
+
     osDelay(1);
   }
   /* USER CODE END MLX90640GetDataTask */

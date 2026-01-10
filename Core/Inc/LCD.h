@@ -40,4 +40,10 @@ void LCD_ShowBinNum(uint8_t Line, uint8_t Column, uint32_t Number, uint8_t Lengt
 
 void LCD_DrawPoint(uint8_t x, uint8_t y, uint16_t color);
 
+void LCD_ShowCharTrpbg(uint8_t x, uint8_t y, char ch, uint16_t color);
+
+void LCD_ShowSignedNumTrpbg(uint8_t Line, uint8_t Column, int32_t Number, uint8_t Length, uint16_t color);
+
+void LCD_ShowStringTrpbg(uint8_t x, uint8_t y, char* str, uint16_t color);
+
 #endif
