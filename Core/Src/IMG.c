@@ -411,120 +411,247 @@ void temp_limit(float *flist,float *maxtemp,uint16_t *max_addr,float *mintemp,ui
 	min_addr[1]=y_min;	
 }
 
+// /*========================================================================*/
+// // 温度 → 灰度 → 逐块双线性插值放大（32×24 → 128×160） → 伪彩
+// // 每个内循环只处理一个 6×4 显示块（不连续插值）
+// // 已修复 vx 未定义问题
+// /*========================================================================*/
+// void display_code(float *flist,uint16_t *color_list,uint16_t size,float tmax,float tmin)
+// {
+//     const int SRC_W = 32;
+//     const int SRC_H = 24;
+//     const int DST_W = 128;
+//     const int DST_H = 160;
+
+//     uint8_t gray_src[SRC_H][SRC_W];   // 原始灰度图，仅 768 字节
+
+//     float tstep = (tmax - tmin) / 255.0f;
+
+//     /*================= 1. 温度 → 灰度（32×24），带左右翻转 =================*/
+//     for (int sy = 0; sy < SRC_H; sy++)
+//     {
+//         for (int sx = 0; sx < SRC_W; sx++)
+//         {
+//             float val = (flist[sy * SRC_W + (SRC_W - 1 - sx)] - tmin) / tstep;
+//             if (val < 0)   val = 0;
+//             if (val > 255) val = 255;
+//             gray_src[sy][sx] = (uint8_t)val;
+
+//             my_printf("gray[%d][%d]:%d\n", sy, sx, gray_src[sy][sx]);
+//         }
+//     }
+
+//     /*================= 2. 逐块双线性插值 + 伪彩（可直接刷屏） =================*/
+//     for (int sy = 0; sy < SRC_H; sy++)
+//     {
+//         for (int sx = 0; sx < SRC_W; sx++)
+//         {
+//             int dst_y_base = sy * 6;    // 当前块在显示图像中的起始行
+//             int dst_x_base = sx * 4;    // 当前块起始列
+
+//             // 获取当前原始像素及其右、下、右下四个角的灰度值
+//             uint8_t tl = gray_src[sy][sx];  // top-left（当前像素）
+
+//             // top-right
+//             uint8_t tr = (sx < SRC_W - 1) ? gray_src[sy][sx + 1]
+//                                          : (uint8_t)(tl + (tl - gray_src[sy][sx - 1]));  // 延伸
+//             if (tr > 255) tr = 255;
+
+//             // bottom-left
+//             uint8_t bl = (sy < SRC_H - 1) ? gray_src[sy + 1][sx]
+//                                          : (uint8_t)(tl + (tl - gray_src[sy - 1][sx]));  // 延伸
+//             if (bl > 255) bl = 255;
+
+//             // bottom-right（优先真实值，否则推算）
+//             uint8_t br;
+//             if (sx < SRC_W - 1 && sy < SRC_H - 1)
+//                 br = gray_src[sy + 1][sx + 1];
+//             else
+//                 br = (uint8_t)(tl + (tr - tl) + (bl - tl));  // 向量加法推算
+//             if (br > 255) br = 255;
+
+//             /*================= 当前 6×4 块内双线性插值 =================*/
+//             for (int by = 0; by < 6; by++)
+//             {
+//                 int dy = dst_y_base + by;
+//                 if (dy >= DST_H) continue;  // 超出 160 行（实际只到 143）
+
+//                 float fy = by / 5.0f;        // 纵向插值比例：0.0 ~ 1.0（第0行和第5行对应原始行）
+
+//                 // 先横向插值得到上下两条边
+//                 // uint16_t top    = (uint16_t)tl + (uint16_t)((tr - tl) * (sx * 4 + 3) / 3.0f * fy);
+//                 // 正确方式：先算上下两行的插值点
+//                 uint16_t left   = (uint16_t)tl + (uint16_t)((bl - tl) * fy);
+//                 uint16_t right  = (uint16_t)tr + (uint16_t)((br - tr) * fy);
+
+//                 for (int bx = 0; bx < 4; bx++)
+//                 {
+//                     int dx = dst_x_base + bx;
+
+//                     float fx = bx / 3.0f;    // 横向插值比例：0.0 ~ 1.0
+
+//                     // 双线性插值：先纵向得到左右，再横向混合
+//                     uint16_t gray = left + (uint16_t)((right - left) * fx);
+//                     if (gray > 255) gray = 255;
+
+//                     uint16_t color = color_list[gray];
+
+//                     // 直接写像素到屏幕（推荐！不占 RAM）
+//                     LCD_DrawPoint(dx, dy, color);
+
+//                     // 如果你暂时还想保留缓冲，可改为：
+//                     // show_list[dy][dx] = color;
+//                 }
+//             }
+//         }
+//     }
+
+//     /*================= 3. 填充底部剩余 16 行（第 144~159 行）=================*/
+//     int base_y = (SRC_H - 1) * 6;  // 第 138 行（最后一组块的第0行）
+
+//     for (int dx = 0; dx < DST_W; dx++)
+//     {
+//         int sx = dx / 4;
+//         uint8_t base_gray = gray_src[SRC_H - 1][sx];
+
+//         // 计算纵向延伸步长（使用最后一组的趋势）
+//         uint8_t prev_gray = (SRC_H > 1) ? gray_src[SRC_H - 2][sx] : base_gray;
+//         float step = (float)(base_gray - prev_gray) / 5.0f;
+
+//         for (int offset = 1; offset <= 16; offset++)
+//         {
+//             int dy = base_y + offset;
+//             uint16_t gray = (uint16_t)(base_gray + step * offset);
+//             if (gray > 255) gray = 255;
+
+//             uint16_t color = color_list[gray];
+//             LCD_DrawPoint(dx, dy, color);
+//         }
+//     }
+// }
+
 /*========================================================================*/
-// 温度 → 灰度 → 逐块双线性插值放大（32×24 → 128×160） → 伪彩
-// 每个内循环只处理一个 6×4 显示块（不连续插值）
-// 已修复 vx 未定义问题
+// 温度 → 灰度 → 逐块双线性插值放大（24×32 → 128×160） → 伪彩
+// 每个内循环只处理一个显示块（不连续插值）
+// 修改：源图像从 32×24 改为 24×32
 /*========================================================================*/
 void display_code(float *flist,uint16_t *color_list,uint16_t size,float tmax,float tmin)
 {
-    const int SRC_W = 32;
-    const int SRC_H = 24;
-    const int DST_W = 128;
-    const int DST_H = 160;
+    const int SRC_W = 24;   // 源图像宽度（修改）
+    const int SRC_H = 32;   // 源图像高度（修改）
+    const int DST_W = 128;  // 目标宽度
+    const int DST_H = 160;  // 目标高度
 
-    uint8_t gray_src[SRC_H][SRC_W];   // 原始灰度图，仅 768 字节
+    uint8_t gray_src[SRC_H][SRC_W];   // 原始灰度图，768 字节
 
     float tstep = (tmax - tmin) / 255.0f;
 
-    /*================= 1. 温度 → 灰度（32×24），带左右翻转 =================*/
+    /*================= 1. 温度 → 灰度（24×32），不翻转 =================*/
+    
+    /* 方案1：转置读取（flist 可能是 32×24 按列存储）
+       适应镜头和屏幕反向情况
+    */
+    // for (int sy = 0; sy < SRC_H; sy++)
+    // {
+    //     for (int sx = 0; sx < SRC_W; sx++)
+    //     {
+    //         // 转置：原来的列变成行
+    //         float val = (flist[sx * SRC_H + sy] - tmin) / tstep;
+    //         if (val < 0)   val = 0;
+    //         if (val > 255) val = 255;
+    //         gray_src[sy][sx] = (uint8_t)val;
+
+    //        // my_printf("gray[%d][%d]:%d\n", sy, sx, gray_src[sy][sx]);
+    //     }
+    // }
+    
+    /* 方案2：转置+翻转 
+       适合镜头和屏幕同向
+    */
     for (int sy = 0; sy < SRC_H; sy++)
     {
         for (int sx = 0; sx < SRC_W; sx++)
         {
-            float val = (flist[sy * SRC_W + (SRC_W - 1 - sx)] - tmin) / tstep;
+            float val = (flist[sx * SRC_H + (SRC_H - 1 - sy)] - tmin) / tstep;
             if (val < 0)   val = 0;
             if (val > 255) val = 255;
             gray_src[sy][sx] = (uint8_t)val;
+
+            // my_printf("gray[%d][%d]:%d\n", sy, sx, gray_src[sy][sx]);
         }
     }
 
     /*================= 2. 逐块双线性插值 + 伪彩（可直接刷屏） =================*/
+    // 24×32 → 128×160
+    // 水平方向：128/24 ≈ 5.33 像素/块（使用 16/3 的比例，每3块占16像素）
+    // 垂直方向：160/32 = 5 像素/块
+    
     for (int sy = 0; sy < SRC_H; sy++)
     {
         for (int sx = 0; sx < SRC_W; sx++)
         {
-            int dst_y_base = sy * 6;    // 当前块在显示图像中的起始行
-            int dst_x_base = sx * 4;    // 当前块起始列
+            // 计算当前块在显示图像中的起始位置
+            // 水平方向使用精确计算：每3个源像素占16个显示像素
+            int dst_x_base = (sx * 16) / 3;      // 起始列
+            int dst_x_end  = ((sx + 1) * 16) / 3; // 结束列
+            int block_w    = dst_x_end - dst_x_base; // 当前块宽度（5或6像素）
+            
+            int dst_y_base = sy * 5;              // 当前块起始行
+            int block_h    = 5;                   // 每块固定5行
 
             // 获取当前原始像素及其右、下、右下四个角的灰度值
             uint8_t tl = gray_src[sy][sx];  // top-left（当前像素）
 
             // top-right
             uint8_t tr = (sx < SRC_W - 1) ? gray_src[sy][sx + 1]
-                                         : (uint8_t)(tl + (tl - gray_src[sy][sx - 1]));  // 延伸
+                                         : (uint8_t)(tl + (tl - gray_src[sy][sx - 1]));
             if (tr > 255) tr = 255;
 
             // bottom-left
             uint8_t bl = (sy < SRC_H - 1) ? gray_src[sy + 1][sx]
-                                         : (uint8_t)(tl + (tl - gray_src[sy - 1][sx]));  // 延伸
+                                         : (uint8_t)(tl + (tl - gray_src[sy - 1][sx]));
             if (bl > 255) bl = 255;
 
-            // bottom-right（优先真实值，否则推算）
+            // bottom-right
             uint8_t br;
             if (sx < SRC_W - 1 && sy < SRC_H - 1)
                 br = gray_src[sy + 1][sx + 1];
             else
-                br = (uint8_t)(tl + (tr - tl) + (bl - tl));  // 向量加法推算
+                br = (uint8_t)(tl + (tr - tl) + (bl - tl));
             if (br > 255) br = 255;
 
-            /*================= 当前 6×4 块内双线性插值 =================*/
-            for (int by = 0; by < 6; by++)
+            /*================= 当前块内双线性插值 =================*/
+            for (int by = 0; by < block_h; by++)
             {
                 int dy = dst_y_base + by;
-                if (dy >= DST_H) continue;  // 超出 160 行（实际只到 143）
+                if (dy >= DST_H) continue;
 
-                float fy = by / 5.0f;        // 纵向插值比例：0.0 ~ 1.0（第0行和第5行对应原始行）
+                float fy = by / (float)(block_h - 1);  // 纵向插值比例：0.0 ~ 1.0
 
-                // 先横向插值得到上下两条边
-                // uint16_t top    = (uint16_t)tl + (uint16_t)((tr - tl) * (sx * 4 + 3) / 3.0f * fy);
-                // 正确方式：先算上下两行的插值点
-                uint16_t left   = (uint16_t)tl + (uint16_t)((bl - tl) * fy);
-                uint16_t right  = (uint16_t)tr + (uint16_t)((br - tr) * fy);
+                // 纵向插值得到当前行左右两个端点
+                uint16_t left  = (uint16_t)tl + (uint16_t)((bl - tl) * fy);
+                uint16_t right = (uint16_t)tr + (uint16_t)((br - tr) * fy);
 
-                for (int bx = 0; bx < 4; bx++)
+                for (int bx = 0; bx < block_w; bx++)
                 {
                     int dx = dst_x_base + bx;
+                    if (dx >= DST_W) continue;
 
-                    float fx = bx / 3.0f;    // 横向插值比例：0.0 ~ 1.0
+                    float fx = bx / (float)(block_w - 1);  // 横向插值比例：0.0 ~ 1.0
 
-                    // 双线性插值：先纵向得到左右，再横向混合
+                    // 双线性插值：横向混合左右端点
                     uint16_t gray = left + (uint16_t)((right - left) * fx);
                     if (gray > 255) gray = 255;
 
                     uint16_t color = color_list[gray];
 
-                    // 直接写像素到屏幕（推荐！不占 RAM）
+                    // 直接写像素到屏幕
                     LCD_DrawPoint(dx, dy, color);
-
-                    // 如果你暂时还想保留缓冲，可改为：
-                    // show_list[dy][dx] = color;
                 }
             }
         }
     }
 
-    /*================= 3. 填充底部剩余 16 行（第 144~159 行）=================*/
-    int base_y = (SRC_H - 1) * 6;  // 第 138 行（最后一组块的第0行）
-
-    for (int dx = 0; dx < DST_W; dx++)
-    {
-        int sx = dx / 4;
-        uint8_t base_gray = gray_src[SRC_H - 1][sx];
-
-        // 计算纵向延伸步长（使用最后一组的趋势）
-        uint8_t prev_gray = (SRC_H > 1) ? gray_src[SRC_H - 2][sx] : base_gray;
-        float step = (float)(base_gray - prev_gray) / 5.0f;
-
-        for (int offset = 1; offset <= 16; offset++)
-        {
-            int dy = base_y + offset;
-            uint16_t gray = (uint16_t)(base_gray + step * offset);
-            if (gray > 255) gray = 255;
-
-            uint16_t color = color_list[gray];
-            LCD_DrawPoint(dx, dy, color);
-        }
-    }
+    /*================= 3. 不需要填充底部（32×5=160，刚好填满）=================*/
+    // 24×32 插值到 128×160 时，垂直方向刚好填满，无需额外处理
 }
-

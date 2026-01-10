@@ -229,6 +229,7 @@ __weak void MLX90640GetDataTask(void *argument)
     uint16_t color_list[256];
     color_listcode(color_list, 1);
     display_code(mlx90640To, color_list, 1, maxTemp, minTemp);
+
     LCD_ShowStringTrpbg(0, 0, "max:", Color_Black);
     LCD_ShowSignedNumTrpbg(0, 4, (uint32_t)maxTemp, 3, Color_Black);
     LCD_ShowStringTrpbg(0, 8, "min:", Color_Black);
